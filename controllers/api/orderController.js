@@ -98,7 +98,7 @@ exports.createNewOrder = async (req, res, next) => {
 
     if (isSuperCustomer) {
       var superCustomerPaymentInfo = {
-        merchantId: `${process.env.PHONEPE_MERCHANTID}`,
+        merchantId: "supercustomer_merchantId",
         merchantTransactionId: "supercustomer_ordered",
         status: "PAYMENT_SUCCESS",
         originalTransactionId: "supercustomer_ordered",
@@ -163,9 +163,9 @@ const generateOrderNumber = async () => {
       ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
       : `${currentYear - 1}-${currentYear.toString().slice(2)}`;
 
-    const regexPattern = new RegExp(`^VE-O-${financialYear}-\\d+$`);
+    const regexPattern = new RegExp(`^C-ASK-O-${financialYear}-\\d+$`);
 
-    const orderNumberPrefix = `VE-O-${financialYear}-`;
+    const orderNumberPrefix = `C-ASK-O-${financialYear}-`;
 
     const latestOrder = await ProductOrderModel.findOne(
       {
@@ -207,9 +207,9 @@ exports.generateOrderNumberAPI = async (req, res, next) => {
       ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
       : `${currentYear - 1}-${currentYear.toString().slice(2)}`;
 
-    const regexPattern = new RegExp(`^VE-O-${financialYear}-\\d+$`);
+    const regexPattern = new RegExp(`^C-ASK-O-${financialYear}-\\d+$`);
 
-    const orderNumberPrefix = `VE-O-${financialYear}-`;
+    const orderNumberPrefix = `C-ASK-O-${financialYear}-`;
 
     const latestOrder = await ProductOrderModel.findOne(
       {

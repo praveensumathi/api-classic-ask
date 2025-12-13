@@ -296,3 +296,64 @@ exports.makeCustomerAsReseller = async (req, res) => {
     console.error(error);
   }
 };
+
+/**
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ */
+exports.createAdmin = async (req, res, next) => {
+  let { name, phoneNumber, email = "", password } = req.body;
+  var adminRole = "admin";
+
+  try {
+    // Check if the user already exists
+    const existingUser = await UserModel.findOne({ phoneNumber });
+    if (existingUser && existingUser.role === adminRole) {
+      const error = new Error(
+        "Invalid User with provided phonenumber already exists entered!"
+      );
+      error.statusCode = 409;
+      throw error;
+    } else {
+      const salt = 10;
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const newUser = new UserModel({
+        name,
+        phoneNumber,
+        email,
+        password: hashedPassword,
+        role:adminRole,
+      });
+      const savedUser = await newUser.save();
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: savedUser._id,
+          phoneNumber: savedUser.phoneNumber,
+          name: savedUser.name,
+          role:adminRole
+        },
+        SECRET_KEY
+      );
+
+      res
+        .cookie(ACCESS_TOKEN, token, {
+          httpOnly: true,
+          maxAge: ExpirationInMilliSeconds, //2days
+        })
+        .status(200)
+        .json({
+          message: "Signup Successful",
+          data: {
+            userId: savedUser._id,
+            phoneNumber: savedUser.phoneNumber,
+            name: savedUser.name,
+            role : savedUser.role
+          },
+        });
+    }
+  } catch (error) {
+    console.error(error);
+    next(error);
+  }
+};

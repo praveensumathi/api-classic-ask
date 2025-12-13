@@ -43,5 +43,6 @@ router.put(
 
   use(adminCustomersController.makeCustomerAsReseller)
 );
+router.post("/createAdmin", use(adminCustomersController.createAdmin));
 
 module.exports = router;
