@@ -416,6 +416,26 @@ exports.updateProduct = async (req, res, next) => {
   }
 };
 
+/**
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ */
+
+exports.deleteS3Image = async (req, res, next) => {
+  try {
+    const url = req.query.url;
+
+    if (url) {
+      const decodedPath = decodeURIComponent(url);
+      var key = path.basename(decodedPath);
+      await deleteFromS3(key);
+    }
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
 const deleteImageFromS3 = async (url) => {
   try {
     if (url) {

@@ -2,6 +2,8 @@ const {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
+  DeleteObjectsCommandInput,
 } = require("@aws-sdk/client-s3");
 require("dotenv").config();
 const { randomBytes } = require("crypto");
@@ -96,6 +98,8 @@ const deleteFromS3 = async (fileName) => {
       });
 
       await s3Client.send(deleteCommand);
+
+      console.log(`S3 Image Deleted = ${fileName}`);
     }
   } catch (error) {
     console.log(error);
@@ -103,9 +107,32 @@ const deleteFromS3 = async (fileName) => {
   }
 };
 
+const deleteMultipleFromS3 = async (fileNames = []) => {
+  try {
+    if (!fileNames.length) return;
+
+    const deleteParams = {
+      Bucket: bucketName,
+      Delete: {
+        Objects: fileNames.map((fileName) => ({
+          Key: fileName,
+        })),
+        Quiet: false, // set true if you don't want detailed response
+      },
+    };
+
+    const command = new DeleteObjectsCommand(deleteParams);
+    await s3Client.send(command);
+  } catch (error) {
+    console.error("Error deleting multiple files from S3:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   uploadToS3,
   deleteFromS3,
+  deleteMultipleFromS3,
   s3Client,
   uploadByMulterS3,
   uploadByMulterS3AsAttachement,

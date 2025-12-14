@@ -72,4 +72,7 @@ router.get(
   useAuth,
   use(adminProductController.getProductInstockReportByDateWise)
 );
+
+//router.delete("/deleteS3Image", use(adminProductController.deleteS3Image));
+
 module.exports = router;
