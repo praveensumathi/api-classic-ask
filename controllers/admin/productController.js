@@ -38,7 +38,6 @@ exports.createProduct = async (req, res, next) => {
 
   try {
     const formData = req.body;
-    console.log("req.body", req.body);
 
     var productImageFiles = [];
     var productPosterImageFile = null;
