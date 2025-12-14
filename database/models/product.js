@@ -23,7 +23,7 @@ const productSchema = new mongoose.Schema({
     },
   ],
   // color: String,
-  // createdDate: { type: Date, default: Date.now },
+  createdDate: { type: Date, default: Date.now },
   description: String,
   productCode: String,
   // netWeight: Number,

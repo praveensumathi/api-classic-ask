@@ -5,7 +5,7 @@ const ExpirationInMilliSeconds = 172800000; //2 days
 const PRODUCT_IMAGES_FIELDNAME = "images";
 const PRODUCT_POSTER_IMAGE = "posterImage";
 
-const PRODUCTCODE = "V";
+const PRODUCTCODE = "C-ASK";
 
 const Roles = {
   ADMIN: "admin",

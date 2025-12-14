@@ -18,7 +18,7 @@ const {
   downloadXLSX,
 } = require("../../utils/utils");
 const { deleteFromS3 } = require("../../config/s3Config");
-const XLSX = require("xlsx");
+
 /**
  * @param {Request} req - The Express request object
  * @param {Response} res - The Express response object
@@ -200,18 +200,24 @@ async function findLastNonVeProductCode() {
  */
 exports.getAllProducts = async (req, res, next) => {
   const searchName = req.query.searchName;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.pageSize) || 10;
+
+  const skip = (page - 1) * limit;
+
   try {
     let matchQuery = {};
     if (searchName) {
+      let _searchName = searchName.toLowerCase().trim();
       matchQuery = {
         $or: [
-          { productCode: { $regex: searchName, $options: "i" } },
-          { title: { $regex: searchName, $options: "i" } },
+          { productCode: { $regex: _searchName, $options: "i" } },
+          { title: { $regex: _searchName, $options: "i" } },
         ],
       };
     }
 
-    const products = await ProductModel.aggregate([
+    const result = await ProductModel.aggregate([
       {
         $lookup: {
           from: "categories",
@@ -224,44 +230,96 @@ exports.getAllProducts = async (req, res, next) => {
         $unwind: "$category",
       },
       ...(searchName ? [{ $match: matchQuery }] : []),
+      { $sort: { createdDate: -1 } },
+      // {
+      //   $project: {
+      //     title: 1,
+      //     description: 1,
+      //     productCode: 1,
+      //     purchaseDate: 1,
+      //     sellerName: 1,
+      //     isWithGST: 1,
+      //     posterURL: 1,
+      //     categoryName: "$category.name",
+      //     materialType: 1,
+      //     categoryId: "$category._id",
+      //     images: 1,
+      //     sizes: {
+      //       $map: {
+      //         input: "$sizes",
+      //         as: "size",
+      //         in: {
+      //           size: "$$size.size",
+      //           purchasePrice: "$$size.purchasePrice",
+      //           resellingPrice: "$$size.resellingPrice",
+      //           offlineSellingPrice: "$$size.offlineSellingPrice",
+      //           inStock: "$$size.inStock",
+      //           purchaseQty: "$$size.purchaseQty",
+      //           netWeight: "$$size.netWeight",
+      //           MRPprice: "$$size.MRPprice",
+      //           price: { $ifNull: ["$$size.price", "$price"] },
+      //         },
+      //       },
+      //     },
+      //   },
+      // },
       {
-        $project: {
-          title: 1,
-          description: 1,
-          productCode: 1,
-          purchaseDate: 1,
-          sellerName: 1,
-          isWithGST: 1,
-          posterURL: 1,
-          categoryName: "$category.name",
-          materialType: 1,
-          categoryId: "$category._id",
-          images: 1,
-          sizes: {
-            $map: {
-              input: "$sizes",
-              as: "size",
-              in: {
-                size: "$$size.size",
-                purchasePrice: "$$size.purchasePrice",
-                resellingPrice: "$$size.resellingPrice",
-                offlineSellingPrice: "$$size.offlineSellingPrice",
-                inStock: "$$size.inStock",
-                purchaseQty: "$$size.purchaseQty",
-                netWeight: "$$size.netWeight",
-                MRPprice: "$$size.MRPprice",
-                price: { $ifNull: ["$$size.price", "$price"] },
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                title: 1,
+                description: 1,
+                productCode: 1,
+                purchaseDate: 1,
+                sellerName: 1,
+                isWithGST: 1,
+                posterURL: 1,
+                categoryName: "$category.name",
+                materialType: 1,
+                categoryId: "$category._id",
+                images: 1,
+                sizes: {
+                  $map: {
+                    input: "$sizes",
+                    as: "size",
+                    in: {
+                      size: "$$size.size",
+                      purchasePrice: "$$size.purchasePrice",
+                      resellingPrice: "$$size.resellingPrice",
+                      offlineSellingPrice: "$$size.offlineSellingPrice",
+                      inStock: "$$size.inStock",
+                      purchaseQty: "$$size.purchaseQty",
+                      netWeight: "$$size.netWeight",
+                      MRPprice: "$$size.MRPprice",
+                      price: { $ifNull: ["$$size.price", "$price"] },
+                    },
+                  },
+                },
               },
             },
-          },
+          ],
+          totalItems: [{ $count: "count" }],
         },
       },
     ]);
 
+    const totalItemsOnDb = result[0].totalItems[0]?.count || 0;
+    const totalPages = Math.ceil(totalItemsOnDb / limit);
+
     var response = {
-      products,
-      total: products.length,
+      products: result[0].data,
+      pageInfo: {
+        page,
+        pageSize: limit,
+        totalPages,
+        totalItems: totalItemsOnDb,
+      },
+      total: totalItemsOnDb,
     };
+
     res.json(response);
   } catch (error) {
     error = new Error("No Products Available");
