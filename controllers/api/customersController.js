@@ -87,6 +87,8 @@ exports.login = async (req, res, next) => {
  */
 exports.signup = async (req, res, next) => {
   let { name, phoneNumber, email, password, role } = req.body;
+  
+  role = "customer";
 
   try {
     // Check if the user already exists
