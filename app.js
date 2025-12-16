@@ -11,6 +11,9 @@ var app = express();
 //env variables imports goes here
 const port = process.env.PORT || 3000;
 const connectionString = process.env.CONNECTION_STRING || "";
+const allowedOriginsWithCredentials = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : [];
 
 //Routes imports goes here
 var productRouter = require("./routes/product");
@@ -23,19 +26,10 @@ var offlineOrderRouter = require("./routes/offlineOrders");
 
 // Middlewares goes here
 app.use((req, res, next) => {
-  const allowedOriginsWithCredentials = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "https://admin.venusethnic.com",
-    "https://venusethnic.com",
-    "http://admin.venusethnic.com",
-    "http://venusethnic.com",
-    "https://www.venusethnic.com",
-  ];
+  const origin = req.headers.origin;
 
-  const isAllowedWithCredentials = allowedOriginsWithCredentials.some(
-    (origin) => req.headers.origin === origin
-  );
+  const isAllowedWithCredentials =
+    origin && allowedOriginsWithCredentials.includes(origin);
 
   if (isAllowedWithCredentials) {
     cors({
