@@ -87,16 +87,14 @@ exports.login = async (req, res, next) => {
  */
 exports.signup = async (req, res, next) => {
   let { name, phoneNumber, email, password, role } = req.body;
-  
+
   role = "customer";
 
   try {
     // Check if the user already exists
     const existingUser = await UserModel.findOne({ phoneNumber });
     if (existingUser && existingUser.role === role) {
-      const error = new Error(
-        "Invalid User with provided phonenumber already exists entered!"
-      );
+      const error = new Error("User Already exists with Phone number!");
       error.statusCode = 409;
       throw error;
     } else {
@@ -110,12 +108,14 @@ exports.signup = async (req, res, next) => {
         role,
       });
       const savedUser = await newUser.save();
+
       // Generate JWT token
       const token = jwt.sign(
         {
           userId: savedUser._id,
           phoneNumber: savedUser.phoneNumber,
           name: savedUser.name,
+          role: savedUser.role,
         },
         SECRET_KEY
       );
@@ -132,7 +132,7 @@ exports.signup = async (req, res, next) => {
             userId: savedUser._id,
             phoneNumber: savedUser.phoneNumber,
             name: savedUser.name,
-            role : savedUser.role
+            role: savedUser.role,
           },
         });
     }
