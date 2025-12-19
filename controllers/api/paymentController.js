@@ -5,7 +5,7 @@
 const Razorpay = require("razorpay");
 var crypto = require("crypto");
 const axios = require("axios");
-  
+
 /**
  * @param {Request} req - The Express request object
  * @param {Response} res - The Express response object
@@ -30,7 +30,7 @@ exports.createRazorpayOrder = async (req, res, next) => {
     };
 
     const order = await instance.orders.create(options);
-    
+
     res.json({
       success: true,
       data: {
@@ -38,9 +38,9 @@ exports.createRazorpayOrder = async (req, res, next) => {
         amount: order.amount,
         currency: order.currency,
         receipt: order.receipt,
-        key: process.env.RAZORPAY_KEY_ID // Frontend needs this for payment processing
+        //key: process.env.RAZORPAY_KEY_ID // Frontend needs this for payment processing
       },
-      message: "Razorpay order created successfully"
+      message: "Razorpay order created successfully",
     });
   } catch (error) {
     console.error("Razorpay order creation error:", error);
@@ -56,7 +56,8 @@ exports.createRazorpayOrder = async (req, res, next) => {
  */
 exports.verifyRazorpayPayment = async (req, res, next) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+      req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       throw new Error("Missing required payment verification parameters");
@@ -75,9 +76,9 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
         data: {
           razorpay_order_id,
           razorpay_payment_id,
-          verified: true
+          verified: true,
         },
-        message: "Payment verified successfully"
+        message: "Payment verified successfully",
       });
     } else {
       throw new Error("Invalid signature sent!");
