@@ -9,7 +9,11 @@ const ProductOrderModel = require("../../database/models/orders");
 const ProductModel = require("../../database/models/product");
 const { isEmptyObject } = require("../../utils/utils");
 const UserModel = require("../../database/models/user");
-const { Roles, SECRET_KEY } = require("../../constants/Constants");
+const {
+  Roles,
+  SECRET_KEY,
+  ACCESS_TOKEN_NAME,
+} = require("../../constants/Constants");
 const jwt = require("jsonwebtoken");
 
 /**
@@ -18,13 +22,11 @@ const jwt = require("jsonwebtoken");
  */
 exports.createNewOrder = async (req, res, next) => {
   try {
-    const { items, shippingDetail, paymentInfo, deliveryFee } =
-      req.body;
-    // console.log(req.body);
+    const { items, shippingDetail, paymentInfo, deliveryFee } = req.body;
 
-    const { nks_access_token } = req.cookies;
+    const token = req.cookies[ACCESS_TOKEN_NAME];
 
-    const decoded = jwt.verify(nks_access_token, SECRET_KEY);
+    const decoded = jwt.verify(token, SECRET_KEY);
     const { userId } = decoded;
 
     if (!userId) {
@@ -107,7 +109,7 @@ exports.createNewOrder = async (req, res, next) => {
 
     var productOrderDoc = await ProductOrderModel.create({
       ...req.body,
-      userId:userId,
+      userId: userId,
       productdetail: orderedItems,
       shippingDetail: {
         address: shippingDetail.address,
@@ -163,9 +165,9 @@ const generateOrderNumber = async () => {
       ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
       : `${currentYear - 1}-${currentYear.toString().slice(2)}`;
 
-    const regexPattern = new RegExp(`^C-ASK-O-${financialYear}-\\d+$`);
+    const orderNumberPrefix = `${process.env.ONLINE_ORDER_PREFIX}-${financialYear}-`;
 
-    const orderNumberPrefix = `C-ASK-O-${financialYear}-`;
+    const regexPattern = new RegExp(`^${orderNumberPrefix}\\d+$`);
 
     const latestOrder = await ProductOrderModel.findOne(
       {
@@ -207,9 +209,9 @@ exports.generateOrderNumberAPI = async (req, res, next) => {
       ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
       : `${currentYear - 1}-${currentYear.toString().slice(2)}`;
 
-    const regexPattern = new RegExp(`^C-ASK-O-${financialYear}-\\d+$`);
+    const orderNumberPrefix = `${process.env.ONLINE_ORDER_PREFIX}-${financialYear}-`;
 
-    const orderNumberPrefix = `C-ASK-O-${financialYear}-`;
+    const regexPattern = new RegExp(`^${orderNumberPrefix}\\d+$`);
 
     const latestOrder = await ProductOrderModel.findOne(
       {

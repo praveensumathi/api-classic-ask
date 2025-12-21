@@ -12,6 +12,7 @@ const use = (fn) => (req, res, next) =>
 router.post("/login", use(customersController.login));
 router.post("/signup", use(customersController.signup));
 router.get("/logout", use(customersController.logout));
+router.get("/adminLogout", use(adminCustomersController.adminLogout));
 router.get("/isAuthorized", use(customersController.isAuthorized));
 router.get(
   "/getUserByUserId/:userId",

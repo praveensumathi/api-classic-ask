@@ -3,6 +3,9 @@ const { uploadToS3 } = require("../config/s3Config");
 const path = require("path");
 const { log } = require("console");
 const XLSX = require("xlsx");
+const jwt = require("jsonwebtoken");
+const { SECRET_KEY } = require("../constants/Constants");
+const UserModel = require("../database/models/user");
 
 exports.uploadImageWithCodeByCanvas = async (file, productCode) => {
   try {
@@ -86,4 +89,31 @@ exports.isEmptyObject = (_object) => {
     return false;
   }
   return true;
+};
+
+exports.validateAccessToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    const { userId } = decoded;
+
+    // Check if the userId exists in the UserModel database
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      const error = new Error("user not found");
+      error.statusCode = 409;
+      throw error;
+    }
+    return decoded;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * @param {String} string1 - The Express request object
+ * @param {String} string2 - The Express request object
+ */
+exports.isEqualStringIgnoreCase = (string1, string2) => {
+  if (typeof string1 !== "string" || typeof string2 !== "string") return false;
+  return string1.trim().toLowerCase() === string2.trim().toLowerCase();
 };

@@ -8,10 +8,11 @@ const jwt = require("jsonwebtoken");
 const { randomBytes } = require("crypto");
 const {
   SECRET_KEY,
-  ACCESS_TOKEN,
+  ACCESS_TOKEN_NAME,
   ExpirationInMilliSeconds,
   Roles,
 } = require("../../constants/Constants");
+const { validateAccessToken } = require("../../utils/utils");
 
 /**
  * @param {Request} req - The Express request object
@@ -65,7 +66,7 @@ exports.login = async (req, res, next) => {
 
       const token = jwt.sign(userObj, SECRET_KEY);
 
-      res.cookie(ACCESS_TOKEN, token, {
+      res.cookie(ACCESS_TOKEN_NAME, token, {
         httpOnly: true,
         maxAge: ExpirationInMilliSeconds, //2 days
       });
@@ -121,7 +122,7 @@ exports.signup = async (req, res, next) => {
       );
 
       res
-        .cookie(ACCESS_TOKEN, token, {
+        .cookie(ACCESS_TOKEN_NAME, token, {
           httpOnly: true,
           maxAge: ExpirationInMilliSeconds, //2days
         })
@@ -261,7 +262,7 @@ function generateResetToken() {
  * @param {Response} res - The Express response object
  */
 exports.logout = async (req, res) => {
-  res.clearCookie(ACCESS_TOKEN);
+  res.clearCookie(ACCESS_TOKEN_NAME);
   res.status(200).json({
     status: true,
     message: "Logged out successfully",
@@ -274,11 +275,11 @@ exports.logout = async (req, res) => {
  * @param {Response} res - The Express response object
  */
 exports.isAuthorized = async (req, res) => {
-  const { nks_access_token } = req.cookies;
+  const token = req.cookies[ACCESS_TOKEN_NAME];
 
-  if (nks_access_token) {
+  if (token) {
     // Check if the access token is valid
-    const payload = await validateAccessToken(nks_access_token);
+    const payload = await validateAccessToken(token);
     if (payload) {
       res.json(payload);
     } else {
@@ -288,22 +289,6 @@ exports.isAuthorized = async (req, res) => {
     res.json(null);
   }
 };
-
-async function validateAccessToken(token) {
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    const { userId } = decoded;
-
-    // Check if the userId exists in the UserModel database
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return null;
-    }
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-}
 
 /**
  * @param {Request} req - The Express request object

@@ -4,10 +4,11 @@ const jwt = require("jsonwebtoken");
 const { randomBytes } = require("crypto");
 const {
   SECRET_KEY,
-  ACCESS_TOKEN,
+  ADMIN_ACCESS_TOKEN_NAME,
   ExpirationInMilliSeconds,
   Roles,
 } = require("../../constants/Constants");
+const { validateAccessToken } = require("../../utils/utils");
 
 /**
  * @typedef {import('express').Request} Request
@@ -41,7 +42,7 @@ exports.getAllCustomers = async (req, res, next) => {
     }
 
     const filteredCustomers = customerDocs.filter((customer) => {
-      return customer.role === "customer";
+      return customer.role === Roles.CUSTOMER;
     });
 
     var response = {
@@ -224,7 +225,7 @@ exports.adminLogin = async (req, res, next) => {
 
       const token = jwt.sign(userObj, SECRET_KEY);
 
-      res.cookie(ACCESS_TOKEN, token, {
+      res.cookie(ADMIN_ACCESS_TOKEN_NAME, token, {
         httpOnly: true,
         maxAge: ExpirationInMilliSeconds, //2 days
       });
@@ -245,11 +246,11 @@ exports.adminLogin = async (req, res, next) => {
  * @param {Response} res - The Express response object
  */
 exports.isAuthorized = async (req, res) => {
-  const { nks_access_token } = req.cookies;
+  const token = req.cookies[ADMIN_ACCESS_TOKEN_NAME];
 
-  if (nks_access_token) {
+  if (token) {
     // Check if the access token is valid
-    const payload = await validateAccessToken(nks_access_token);
+    const payload = await validateAccessToken(token);
     if (payload) {
       res.json(payload);
     } else {
@@ -259,22 +260,6 @@ exports.isAuthorized = async (req, res) => {
     res.json(null);
   }
 };
-
-async function validateAccessToken(token) {
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    const { userId } = decoded;
-
-    // Check if the userId exists in the UserModel database
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return null;
-    }
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-}
 
 exports.makeCustomerAsReseller = async (req, res) => {
   try {
@@ -322,7 +307,7 @@ exports.createAdmin = async (req, res, next) => {
         phoneNumber,
         email,
         password: hashedPassword,
-        role:adminRole,
+        role: adminRole,
       });
       const savedUser = await newUser.save();
       // Generate JWT token
@@ -331,13 +316,13 @@ exports.createAdmin = async (req, res, next) => {
           userId: savedUser._id,
           phoneNumber: savedUser.phoneNumber,
           name: savedUser.name,
-          role:adminRole
+          role: adminRole,
         },
         SECRET_KEY
       );
 
       res
-        .cookie(ACCESS_TOKEN, token, {
+        .cookie(ADMIN_ACCESS_TOKEN_NAME, token, {
           httpOnly: true,
           maxAge: ExpirationInMilliSeconds, //2days
         })
@@ -348,7 +333,7 @@ exports.createAdmin = async (req, res, next) => {
             userId: savedUser._id,
             phoneNumber: savedUser.phoneNumber,
             name: savedUser.name,
-            role : savedUser.role
+            role: savedUser.role,
           },
         });
     }
@@ -356,4 +341,17 @@ exports.createAdmin = async (req, res, next) => {
     console.error(error);
     next(error);
   }
+};
+
+/**
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ */
+exports.adminLogout = async (req, res) => {
+  res.clearCookie(ADMIN_ACCESS_TOKEN_NAME);
+  res.status(200).json({
+    status: true,
+    message: "Logged out successfully",
+    data: null,
+  });
 };

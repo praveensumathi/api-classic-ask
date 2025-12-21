@@ -9,21 +9,6 @@ const ProductModel = require("../../database/models/product");
  * @param {Request} req - The Express request object
  * @param {Response} res - The Express response object
  */
-// exports.fetchProductsByCategory = async (req, res) => {
-//   try {
-//     const categoryId = req.params.categoryId;
-//     const products = await ProductModel.find({ category: categoryId });
-
-//     res.json(products);
-//   } catch (error) {
-//     res.status(500).json({ error: "Failed to fetch products" });
-//   }
-// };
-
-/**
- * @param {Request} req - The Express request object
- * @param {Response} res - The Express response object
- */
 exports.fetchProductByID = async (req, res, next) => {
   try {
     const productId = req.params.productId;

@@ -8,7 +8,7 @@ var Jimp = require("jimp");
 const {
   PRODUCT_IMAGES_FIELDNAME,
   PRODUCT_POSTER_IMAGE,
-  PRODUCTCODE,
+  PRODUCT_CODE,
 } = require("../../constants/Constants");
 const CategoryModel = require("../../database/models/category");
 const ProductModel = require("../../database/models/product");
@@ -63,21 +63,22 @@ exports.createProduct = async (req, res, next) => {
       });
     }
 
-    let lastProduct = await ProductModel.findOne()
-      .sort({ $natural: -1 })
-      .limit(1);
+    //let lastProduct = await ProductModel.findOne().sort({ _id: -1 }).limit(1);
 
-    let productCode = `${PRODUCTCODE}0001`;
+    let productCode = `${PRODUCT_CODE}0001`;
 
-    if (lastProduct && lastProduct.productCode && !formData.productCode) {
-      const lastCode = await findLastNonVeProductCode();
+    // ✅ If formData.productCode is provided, use it directly
+    if (formData.productCode) {
+      productCode = formData.productCode;
+    } else {
+      // Otherwise, generate next product code
+      const lastCode = await findLastProductCode(PRODUCT_CODE);
+
       if (lastCode) {
-        const lastProductCode = parseInt(
-          lastCode.substring(PRODUCTCODE.length)
-        );
-        if (lastProductCode) {
-          let nextNumber = lastProductCode + 1;
-          productCode = `${PRODUCTCODE}${nextNumber
+        const lastNumber = parseInt(lastCode.replace(PRODUCT_CODE, ""), 10);
+
+        if (!isNaN(lastNumber)) {
+          productCode = `${PRODUCT_CODE}${(lastNumber + 1)
             .toString()
             .padStart(4, "0")}`;
         }
@@ -97,7 +98,8 @@ exports.createProduct = async (req, res, next) => {
         for (const file of productImageFiles) {
           var url = await uploadImageWithCodeByCanvas(
             file,
-            formData.productCode ? "" : productCode
+            formData.productCode ? "" : productCode //if formData.productCode exists which means
+            //  the image has product code. so no need to draw the product code on the image
           );
           if (url) {
             uploadedProductImages.push(url);
@@ -108,7 +110,8 @@ exports.createProduct = async (req, res, next) => {
       if (productPosterImageFile) {
         var url = await uploadImageWithCodeByCanvas(
           productPosterImageFile,
-          formData.productCode ? "" : productCode
+          formData.productCode ? "" : productCode //if formData.productCode exists which means
+          //  the image has product code. so no need to draw the product code on the image
         );
         if (url) {
           uploadedProductPosterImage = url;
@@ -123,14 +126,15 @@ exports.createProduct = async (req, res, next) => {
       price: parseInt(formData.price),
       sizes,
       description: formData.description,
-      productCode: formData.productCode ? formData.productCode : productCode,
+      productCode: productCode,
       materialType: formData.materialType,
       category: formData.category,
       purchaseDate: formData.purchaseDate
         ? formatDateForMongoDB(formData.purchaseDate)
         : null,
       sellerName: formData.sellerName,
-      isWithGST: JSON.parse(formData.isWithGST) == true ? true : false,
+      //isWithGST: JSON.parse(formData.isWithGST) == true ? true : false,
+      isWithGST: false,
     });
 
     res.json(newProductDoc);
@@ -156,13 +160,17 @@ exports.createProduct = async (req, res, next) => {
   }
 };
 
-async function findLastNonVeProductCode() {
+/**
+ * @param {String} prefix - The Express request object
+ */
+async function findLastProductCode(prefix) {
   try {
     const result = await ProductModel.aggregate([
       {
         $match: {
           productCode: {
-            $not: /^ve|^VE/,
+            $regex: `^${prefix}`,
+            $options: "i",
           },
         },
       },
@@ -344,6 +352,8 @@ exports.updateProduct = async (req, res, next) => {
     }
     const formData = req.body;
 
+    var removedImages = JSON.parse(formData.removedImages);
+
     var product = await ProductModel.findById(productId, {
       productCode: 1,
       _id: 1,
@@ -393,7 +403,8 @@ exports.updateProduct = async (req, res, next) => {
         ? formatDateForMongoDB(formData.purchaseDate)
         : null,
       sellerName: formData.sellerName,
-      isWithGST: JSON.parse(formData.isWithGST) == true ? true : false,
+      //isWithGST: JSON.parse(formData.isWithGST) == true ? true : false,
+      isWithGST: false,
     };
 
     if (req.files && req.files.length > 0) {
@@ -406,13 +417,12 @@ exports.updateProduct = async (req, res, next) => {
       );
 
       if (productImageFiles && productImageFiles.length > 0) {
-        for (const file of productImageFiles) {
+        for (const productImage of productImageFiles) {
           var url = await uploadImageWithCodeByCanvas(
-            file,
-            // product.productCode
-            product.productCode.toUpperCase().startsWith("VE")
+            productImage,
+            product.productCode.toUpperCase().startsWith(PRODUCT_CODE)
               ? ""
-              : product.productCode
+              : updatedFields.productCode
           );
           if (url) {
             uploadedProductImages.push(url);
@@ -422,10 +432,9 @@ exports.updateProduct = async (req, res, next) => {
       if (productPosterImageFile) {
         var url = await uploadImageWithCodeByCanvas(
           productPosterImageFile,
-          // product.productCode
-          product.productCode.toUpperCase().startsWith("VE")
+          product.productCode.toUpperCase().startsWith(PRODUCT_CODE)
             ? ""
-            : product.productCode
+            : updatedFields.productCode
         );
         if (url) {
           uploadedProductPosterImage = url;
@@ -447,14 +456,14 @@ exports.updateProduct = async (req, res, next) => {
       { new: true }
     );
 
-    var removedImages = JSON.parse(formData.removedImages);
-
     if (removedImages && removedImages.length > 0) {
-      for (const url of removedImages) {
-        if (url) {
-          await deleteImageFromS3(url);
-        }
-      }
+      const deleteResult = await Promise.allSettled(
+        removedImages.filter(Boolean).map((url) => deleteImageFromS3(url))
+      ).catch((err) => {
+        console.error("Background S3 delete failed:", err);
+      });
+
+      console.log(deleteResult);
     }
 
     res.json(existingProduct);
@@ -583,6 +592,12 @@ exports.bulkupload = async (req, res, next) => {
       throw error;
     }
 
+    // Pre-fetch the last product code once to avoid querying DB for each item
+    let lastCodeInDB = await findLastProductCode(PRODUCT_CODE);
+    let lastNumber = lastCodeInDB
+      ? parseInt(lastCodeInDB.replace(PRODUCT_CODE, ""), 10)
+      : 0;
+
     for (const productData of products) {
       productData.isWithGST = Boolean(productData.isWithGST);
 
@@ -590,26 +605,11 @@ exports.bulkupload = async (req, res, next) => {
 
       if (!productData.productCode) {
         // Generate productCode if not provided
-        let lastProduct = await ProductModel.findOne()
-          .sort({ $natural: -1 })
-          .limit(1);
+        lastNumber += 1;
 
-        productCode = `${PRODUCTCODE}0001`;
-
-        if (lastProduct && lastProduct.productCode) {
-          const lastCode = await findLastNonVeProductCode();
-          if (lastCode) {
-            const lastProductCode = parseInt(
-              lastCode.substring(PRODUCTCODE.length)
-            );
-            if (lastProductCode) {
-              let nextNumber = lastProductCode + 1;
-              productCode = `${PRODUCTCODE}${nextNumber
-                .toString()
-                .padStart(4, "0")}`;
-            }
-          }
-        }
+        productCode = `${PRODUCT_CODE}${lastNumber
+          .toString()
+          .padStart(4, "0")}`;
       }
 
       // this is for upload product images
@@ -628,6 +628,8 @@ exports.bulkupload = async (req, res, next) => {
               var uploadedUrl = await uploadImageWithCodeByCanvas(
                 file,
                 productData.productCode ? "" : productCode
+                //if productData.productCode exists which means
+                //the image has product code. so no need to draw the product code on the image
               );
 
               images.push(uploadedUrl);
@@ -661,6 +663,8 @@ exports.bulkupload = async (req, res, next) => {
             const posterImageUrl = await uploadImageWithCodeByCanvas(
               file,
               productData.productCode ? "" : productCode
+              //if productData.productCode exists which means
+              //the image has product code. so no need to draw the product code on the image
             );
             productData.posterURL = posterImageUrl;
           } else {
