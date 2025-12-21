@@ -139,6 +139,11 @@ exports.getAllCategory = async (req, res, next) => {
         },
       },
       {
+        $sort: {
+          sortOrder: 1,
+        },
+      },
+      {
         $project: {
           _id: 1,
           name: 1,
@@ -264,6 +269,39 @@ exports.fetchProductsByCategoryId = async (req, res, next) => {
     ]);
 
     res.json(categoryWithProducts.length > 0 ? categoryWithProducts : []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ */
+exports.updateCategorySortOrder = async (req, res, next) => {
+  try {
+    const { orderedCategoryIds } = req.body;
+
+    if (!Array.isArray(orderedCategoryIds) || orderedCategoryIds.length === 0) {
+      return res.status(400).json({
+        message: "orderedCategoryIds must be a non-empty array",
+      });
+    }
+
+    // Build bulk operations
+    const bulkOps = orderedCategoryIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: new mongoose.Types.ObjectId(id) },
+        update: { $set: { sortOrder: index + 1 } },
+      },
+    }));
+
+    await CategoryModel.bulkWrite(bulkOps);
+
+    res.json({
+      success: true,
+      message: "Category sort order updated successfully",
+    });
   } catch (error) {
     next(error);
   }

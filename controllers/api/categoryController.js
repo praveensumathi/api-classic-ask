@@ -189,6 +189,6 @@ exports.fetchProductsByCategory = async (req, res, next) => {
  * @param {Response} res - The Express response object
  */
 exports.fetchCategory = async (req, res) => {
-  var course = await CategoryModel.find();
-  res.json(course);
+  var categories = await CategoryModel.find().sort({ sortOrder: 1 });
+  res.json(categories);
 };

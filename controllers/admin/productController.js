@@ -238,38 +238,6 @@ exports.getAllProducts = async (req, res, next) => {
       },
       ...(searchName ? [{ $match: matchQuery }] : []),
       { $sort: { createdDate: -1 } },
-      // {
-      //   $project: {
-      //     title: 1,
-      //     description: 1,
-      //     productCode: 1,
-      //     purchaseDate: 1,
-      //     sellerName: 1,
-      //     isWithGST: 1,
-      //     posterURL: 1,
-      //     categoryName: "$category.name",
-      //     materialType: 1,
-      //     categoryId: "$category._id",
-      //     images: 1,
-      //     sizes: {
-      //       $map: {
-      //         input: "$sizes",
-      //         as: "size",
-      //         in: {
-      //           size: "$$size.size",
-      //           purchasePrice: "$$size.purchasePrice",
-      //           resellingPrice: "$$size.resellingPrice",
-      //           offlineSellingPrice: "$$size.offlineSellingPrice",
-      //           inStock: "$$size.inStock",
-      //           purchaseQty: "$$size.purchaseQty",
-      //           netWeight: "$$size.netWeight",
-      //           MRPprice: "$$size.MRPprice",
-      //           price: { $ifNull: ["$$size.price", "$price"] },
-      //         },
-      //       },
-      //     },
-      //   },
-      // },
       {
         $facet: {
           data: [

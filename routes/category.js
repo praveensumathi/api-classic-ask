@@ -46,5 +46,10 @@ router.get(
   useAdminAuth,
   use(categoryControlleradmin.fetchProductsByCategoryId)
 );
+router.put(
+  "/updateCategorySortOrder",
+  useAdminAuth,
+  use(categoryControlleradmin.updateCategorySortOrder)
+);
 
 module.exports = router;
