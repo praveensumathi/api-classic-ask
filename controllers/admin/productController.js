@@ -17,7 +17,7 @@ const {
   uploadImageWithCodeByCanvas,
   downloadXLSX,
 } = require("../../utils/utils");
-const { deleteFromS3 } = require("../../config/s3Config");
+const { deleteFromS3, deleteMultipleFromS3 } = require("../../config/s3Config");
 
 /**
  * @param {Request} req - The Express request object
@@ -810,10 +810,11 @@ exports.deleteOutOfStock = async (req, res, next) => {
       });
 
       if (deleteImages && deleteImages.length > 0) {
-        for (const url of deleteImages) {
-          if (url) {
-            await deleteImageFromS3(url);
-          }
+        var fileNamesToDelete = await getS3ImageFileNames(deleteImages);
+        if (fileNamesToDelete.length) {
+          deleteMultipleFromS3(fileNamesToDelete).catch((err) => {
+            console.error("S3 delete failed:", err);
+          });
         }
       }
       res.json(deletedProducts);
@@ -942,4 +943,25 @@ const getMonthAndYearofDate = (date) => {
     .toLocaleString("en-US", options)
     .toUpperCase();
   return formattedDate;
+};
+
+/**
+ * @param {Sting[]} urls - The Express string array
+ */
+const getS3ImageFileNames = async (urls = []) => {
+  try {
+    if (!Array.isArray(urls)) return [];
+
+    const fileNames = urls
+      .filter(Boolean) // remove null / undefined
+      .map((url) => {
+        const decodedPath = decodeURIComponent(url);
+        return path.basename(decodedPath);
+      });
+
+    return fileNames;
+  } catch (error) {
+    console.error("Error extracting S3 file names:", error);
+    throw error;
+  }
 };

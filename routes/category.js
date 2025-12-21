@@ -4,7 +4,7 @@ var router = express.Router();
 const categoryController = require("../controllers/api/categoryController");
 const categoryControlleradmin = require("../controllers/admin/categoryController");
 const { uploadByMulterS3 } = require("../config/s3Config");
-const { useAuth } = require("../middleware/middleware");
+const { useAuth, useAdminAuth } = require("../middleware/middleware");
 
 const use = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -23,27 +23,27 @@ router.get("/fetchCategory", use(categoryController.fetchCategory));
 // admin controller
 router.get(
   "/getAllCategory",
-  useAuth,
+  useAdminAuth,
   use(categoryControlleradmin.getAllCategory)
 );
 router.post(
   "/createCategory",
-  [useAuth, uploadByMulterS3.single("categoryImage")],
+  [useAdminAuth, uploadByMulterS3.single("categoryImage")],
   use(categoryControlleradmin.createCategory)
 );
 router.put(
   "/updateCategory/:categoryId",
-  [useAuth, uploadByMulterS3.single("categoryImage")],
+  [useAdminAuth, uploadByMulterS3.single("categoryImage")],
   use(categoryControlleradmin.updateCategory)
 );
 router.delete(
   "/deleteCategory/:categoryId",
-  useAuth,
+  useAdminAuth,
   use(categoryControlleradmin.deleteCategory)
 );
 router.get(
   "/fetchProductsByCategoryId/:categoryId",
-  useAuth,
+  useAdminAuth,
   use(categoryControlleradmin.fetchProductsByCategoryId)
 );
 

@@ -3,7 +3,7 @@ var router = express.Router();
 
 const customersController = require("../controllers/api/customersController");
 const adminCustomersController = require("../controllers/admin/customersController");
-const { useAuth } = require("../middleware/middleware");
+const { useAdminAuth } = require("../middleware/middleware");
 
 const use = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
@@ -12,7 +12,6 @@ const use = (fn) => (req, res, next) =>
 router.post("/login", use(customersController.login));
 router.post("/signup", use(customersController.signup));
 router.get("/logout", use(customersController.logout));
-router.get("/adminLogout", use(adminCustomersController.adminLogout));
 router.get("/isAuthorized", use(customersController.isAuthorized));
 router.get(
   "/getUserByUserId/:userId",
@@ -21,20 +20,25 @@ router.get(
 router.put("/updateProfile/:userId", use(customersController.updateProfile));
 
 //Admin
+router.get("/adminLogout", use(adminCustomersController.adminLogout));
+router.get(
+  "/adminIsAuthorized",
+  use(adminCustomersController.adminIsAuthorized)
+);
 router.get(
   "/getAllCustomers",
-  useAuth,
+  useAdminAuth,
   use(adminCustomersController.getAllCustomers)
 );
 router.delete(
   "/deleteCustomer/:id",
-  useAuth,
+  useAdminAuth,
   use(adminCustomersController.deleteCustomer)
 );
 router.post("/resetPassword", use(adminCustomersController.resetPassword));
 router.post(
   "/generateResetLink",
-  useAuth,
+  useAdminAuth,
   use(adminCustomersController.generateResetLink)
 );
 router.post("/adminLogin", use(adminCustomersController.adminLogin));

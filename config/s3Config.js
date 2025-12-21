@@ -109,6 +109,8 @@ const deleteFromS3 = async (fileName) => {
 
 const deleteMultipleFromS3 = async (fileNames = []) => {
   try {
+    if (!Array.isArray(fileNames)) return;
+
     if (!fileNames.length) return;
 
     const deleteParams = {

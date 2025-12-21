@@ -3,13 +3,14 @@ const productController = require("../controllers/api/productController");
 const adminProductController = require("../controllers/admin/productController");
 var router = express.Router();
 const { uploadByMulterS3 } = require("../config/s3Config");
-const { useAuth } = require("../middleware/middleware");
+const { useAuth, useAdminAuth } = require("../middleware/middleware");
 const multer = require("multer");
 const upload = multer();
 
 const use = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);
 
+//User
 router.post("/checkValidation", use(productController.checkValidation));
 router.get(
   "/fetchProductsByCategory/:categoryId",
@@ -26,15 +27,16 @@ router.get(
   use(productController.getNewArrivalProducts)
 );
 
+//Admin
 router.get("/getAllProducts", use(adminProductController.getAllProducts));
 router.post(
   "/createProduct",
-  [upload.any(), useAuth],
+  [upload.any(), useAdminAuth],
   use(adminProductController.createProduct)
 );
 router.put(
   "/updateProduct/:productId",
-  [upload.any(), useAuth],
+  [upload.any(), useAdminAuth],
   use(adminProductController.updateProduct)
 );
 router.delete(
@@ -42,34 +44,38 @@ router.delete(
   use(adminProductController.deleteProduct)
 );
 
-router.post("/bulkupload", useAuth, use(adminProductController.bulkupload));
+router.post(
+  "/bulkupload",
+  useAdminAuth,
+  use(adminProductController.bulkupload)
+);
 router.post(
   "/productBulkDelete",
-  useAuth,
+  useAdminAuth,
   use(adminProductController.productBulkDelete)
 );
 router.get("/resolveFilePath", use(adminProductController.resolveFilePath));
 
 router.delete(
   "/deleteOutOfStock",
-  useAuth,
+  useAdminAuth,
   use(adminProductController.deleteOutOfStock)
 );
 router.get(
   "/fetchProductByProductCode/:productCode",
-  useAuth,
+  useAdminAuth,
   use(adminProductController.fetchProductByProductCode)
 );
 
 router.get(
   "/getPurchaseProductReportByDateWise/:fromDate/:toDate",
-  useAuth,
+  useAdminAuth,
   use(adminProductController.getPurchaseProductReportByDateWise)
 );
 
 router.get(
   "/getProductInstockReportByDateWise/:fromDate/:toDate",
-  useAuth,
+  useAdminAuth,
   use(adminProductController.getProductInstockReportByDateWise)
 );
 

@@ -245,7 +245,7 @@ exports.adminLogin = async (req, res, next) => {
  * @param {Request} req - The Express request object
  * @param {Response} res - The Express response object
  */
-exports.isAuthorized = async (req, res) => {
+exports.adminIsAuthorized = async (req, res) => {
   const token = req.cookies[ADMIN_ACCESS_TOKEN_NAME];
 
   if (token) {
