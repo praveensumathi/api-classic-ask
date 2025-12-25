@@ -4,10 +4,8 @@
  */
 const mongoose = require("mongoose");
 const path = require("path");
-
 const CategoryModel = require("../../database/models/category");
-const ProductModel = require("../../database/models/product");
-const { deleteFromS3, uploadToS3 } = require("../../config/s3Config");
+const { deleteFromS3 } = require("../../config/s3Config");
 
 /**
  * @param {Request} req - The Express request object
@@ -31,10 +29,18 @@ exports.createCategory = async (req, res, next) => {
       throw new Error("Category with this name already exists");
     }
 
+    const lastCategory = await CategoryModel.findOne()
+      .sort({ sortOrder: -1 })
+      .select("sortOrder")
+      .lean();
+
+    const nextSortOrder = lastCategory ? lastCategory.sortOrder + 1 : 1;
+
     var newCategoryDoc = await CategoryModel.create({
       image: categoryImageS3Location.location,
       description: formData.description,
       name: formData.name.trim(),
+      sortOrder: nextSortOrder,
     });
 
     res.json(newCategoryDoc);
