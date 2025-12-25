@@ -61,9 +61,20 @@ const uploadInS3 = async (imageFile, buffer) => {
   }
 };
 
-exports.downloadXLSX = (data, pageName, sheetName, res) => {
+exports.downloadXLSX = (
+  data,
+  fileName,
+  sheetName,
+  res,
+  worksheetOptions = {}
+) => {
   try {
-    const workSheet = XLSX.utils.json_to_sheet(data);
+    const workSheet = Array.isArray(data)
+      ? XLSX.utils.aoa_to_sheet(data)
+      : XLSX.utils.json_to_sheet(data);
+
+    Object.assign(workSheet, worksheetOptions);
+
     const workBook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workBook, workSheet, sheetName);
 
@@ -73,7 +84,7 @@ exports.downloadXLSX = (data, pageName, sheetName, res) => {
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${pageName}.xlsx`
+      `attachment; filename=${fileName}.xlsx`
     );
 
     const buffer = XLSX.write(workBook, { bookType: "xlsx", type: "buffer" });

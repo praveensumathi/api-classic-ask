@@ -18,6 +18,7 @@ const {
   downloadXLSX,
 } = require("../../utils/utils");
 const { deleteFromS3, deleteMultipleFromS3 } = require("../../config/s3Config");
+const ProductOrderModel = require("../../database/models/orders");
 
 /**
  * @param {Request} req - The Express request object
@@ -902,6 +903,97 @@ exports.getProductInstockReportByDateWise = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.downloadGSTSalesReportExcel = async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.params;
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ message: "From & To dates required" });
+    }
+
+    const orders = await ProductOrderModel.find({
+      orderedDateAndTime: {
+        $gte: new Date(fromDate),
+        $lte: new Date(toDate),
+      },
+      "paymentInfo.status": "PAYMENT_SUCCESS",
+    }).lean();
+
+    // 🔹 Excel Rows
+    const rows = [];
+
+    // Header rows
+    rows.push(["Classic Style"]);
+    rows.push(["Payan’s Mens Wear, Near Clock Tower, Namakkal - 637001"]);
+    rows.push(["GST Sales Report"]);
+    rows.push([]);
+
+    // Column Headers
+    rows.push([
+      "Customer Name",
+      "GSTIN",
+      "Invoice No",
+      "Invoice Date",
+      "Taxable Value",
+      "SGST",
+      "CGST",
+      "Other Amt",
+      "Net Amount",
+    ]);
+
+    // Data rows
+    orders.forEach((order) => {
+      const taxableValue = Number(order.totalPrice || 0);
+      const sgst = +(taxableValue * 0.025).toFixed(2);
+      const cgst = +(taxableValue * 0.025).toFixed(2);
+      //const otherAmt = -(order.deliveryFee || 0);
+      const otherAmt = 0;
+      const netAmount = +(taxableValue + sgst + cgst + otherAmt).toFixed(2);
+
+      rows.push([
+        order.shippingDetail?.name || "",
+        "", // GSTIN
+        order.orderNumber,
+        new Date(order.orderedDateAndTime).toLocaleDateString("en-GB"),
+        taxableValue.toFixed(2),
+        sgst,
+        cgst,
+        "", //other Amount
+        Math.round(netAmount),
+      ]);
+    });
+    const fileName = getSalesBillFileName(fromDate);
+
+    const worksheetOptions = {
+      "!cols": [
+        { wch: 20 }, // Customer Name
+        { wch: 15 }, // GSTIN
+        { wch: 20 }, // Invoice No
+        { wch: 15 }, // Invoice Date
+        { wch: 15 }, // Taxable Value
+        { wch: 10 }, // SGST
+        { wch: 10 }, // CGST
+        { wch: 12 }, // Other Amt
+        { wch: 15 }, // Net Amount
+      ],
+    };
+
+    downloadXLSX(rows, fileName, "KGM", res, worksheetOptions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to generate GST report" });
+  }
+};
+
+function getSalesBillFileName(fromDate) {
+  const date = new Date(fromDate);
+
+  const month = date.toLocaleString("en-US", { month: "long" });
+  const year = date.getFullYear();
+
+  return `${month}.${year} SALES BILL`;
+}
 
 const getMonthAndYearofDate = (date) => {
   const givenDate = new Date(date);

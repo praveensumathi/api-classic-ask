@@ -74,6 +74,12 @@ router.get(
 );
 
 router.get(
+  "/downloadGSTSalesReportExcel/:fromDate/:toDate",
+  useAdminAuth,
+  use(adminProductController.downloadGSTSalesReportExcel)
+);
+
+router.get(
   "/getProductInstockReportByDateWise/:fromDate/:toDate",
   useAdminAuth,
   use(adminProductController.getProductInstockReportByDateWise)
