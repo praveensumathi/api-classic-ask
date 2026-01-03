@@ -1,6 +1,5 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
-//const logger = require("morgan");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
@@ -34,7 +33,8 @@ app.use(cookieParser());
 
 // Enable logger only in non-prod
 if (process.env.NODE_ENV !== "production") {
-  //app.use(logger("dev"));
+  const logger = require("morgan");
+  app.use(logger("dev"));
 }
 
 // Single CORS instance (FAST)
