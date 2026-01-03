@@ -1,95 +1,101 @@
-var express = require("express");
-// var path = require('path');
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-require("dotenv").config();
+const express = require("express");
+const cookieParser = require("cookie-parser");
+//const logger = require("morgan");
 const mongoose = require("mongoose");
-var cors = require("cors");
+const cors = require("cors");
 
-var app = express();
+const envFile =
+  process.env.NODE_ENV === "production"
+    ? ".prod.env"
+    : ".env";
 
-//env variables imports goes here
-const port = process.env.PORT || 3000;
+require("dotenv").config({path : envFile});
+
+const app = express();
+
+// ===================
+// ENV
+// ===================
+const port = process.env.PORT || 3001;
 const connectionString = process.env.CONNECTION_STRING || "";
-const allowedOriginsWithCredentials = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
-  : [];
 
-//Routes imports goes here
-var productRouter = require("./routes/product");
-var categoryRouter = require("./routes/category");
-var myBagRouter = require("./routes/myBag");
-var orderRouter = require("./routes/orders");
-var customerRouter = require("./routes/customer");
-var paymentRouter = require("./routes/payment");
-var offlineOrderRouter = require("./routes/offlineOrders");
+const allowedOrigins = new Set(
+  process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : []
+);
 
-// Middlewares goes here
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  const isAllowedWithCredentials =
-    origin && allowedOriginsWithCredentials.includes(origin);
-
-  if (isAllowedWithCredentials) {
-    cors({
-      origin: req.headers.origin,
-      credentials: true,
-    })(req, res, next);
-  } else {
-    cors()(req, res, next);
-  }
-});
-
-app.use(logger("dev"));
+// ===================
+// GLOBAL MIDDLEWARES
+// ===================
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-// app.use(express.static(path.join(__dirname, 'public')));
+// Enable logger only in non-prod
+if (process.env.NODE_ENV !== "production") {
+  //app.use(logger("dev"));
+}
 
-//Db Connnection
-mongoose
-  .connect(connectionString, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+// Single CORS instance (FAST)
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
   })
-  .then(() => {
-    console.log("MongoDB connected");
-  })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error);
-  });
+);
 
-//Routes
-app.use("/product", productRouter);
-app.use("/category", categoryRouter);
-app.use("/myBag", myBagRouter);
-app.use("/orders", orderRouter);
-app.use("/customer", customerRouter);
-app.use("/payment", paymentRouter);
-app.use("/offlineOrder", offlineOrderRouter);
-//these middleware should at last but before error handlers
-app.use("*", (req, res, next) => {
-  const err = new Error(`Can't find ${req.originalUrl} on the server`);
-  err.status = "fail";
-  err.statusCode = 404;
+// ===================
+// ROUTES (Lazy-friendly)
+// ===================
+app.use("/product", require("./routes/product"));
+app.use("/category", require("./routes/category"));
+app.use("/myBag", require("./routes/myBag"));
+app.use("/orders", require("./routes/orders"));
+app.use("/customer", require("./routes/customer"));
+app.use("/payment", require("./routes/payment"));
+app.use("/offlineOrder", require("./routes/offlineOrders"));
 
-  next(err);
-});
-
-//Error handling middleware
-app.use((error, req, res, next) => {
-  error.statusCode = error.statusCode || 500;
-  error.status = error.status || "error";
-  console.log(error);
-  res.status(error.statusCode).json({
-    statusCode: error.statusCode,
-    status: error.status,
-    message: error.message,
+// ===================
+// 404 HANDLER
+// ===================
+app.all("*", (req, res, next) => {
+  next({
+    statusCode: 404,
+    status: "fail",
+    message: `Can't find ${req.originalUrl}`,
   });
 });
 
+// ===================
+// ERROR HANDLER
+// ===================
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    statusCode,
+    status: err.status || "error",
+    message: err.message || "Internal server error",
+  });
+});
+
+// ===================
+// START SERVER FIRST
+// ===================
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`🚀 Server running on port ${port}`);
 });
+
+// ===================
+// CONNECT DB IN BACKGROUND
+// ===================
+mongoose
+  .connect(connectionString)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB error:", err));

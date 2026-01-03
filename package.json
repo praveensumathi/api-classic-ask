@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node app.js",
-    "dev": "env-cmd -f ./.env nodemon app.js",
-    "prod": "env-cmd -f ./.prod.env node app.js"
+    "dev": "cross-env NODE_ENV=production nodemon app.js",
+    "prod": "cross-env NODE_ENV=production node app.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.367.0",
@@ -29,5 +29,8 @@
     "nodemon": "^2.0.22",
     "razorpay": "^2.9.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
   }
 }

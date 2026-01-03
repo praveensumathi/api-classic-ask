@@ -28,7 +28,7 @@ exports.uploadImageWithCodeByCanvas = async (file, productCode) => {
     ctx.textBaseline = "top";
 
     ctx.fillStyle = "black";
-    ctx.fillText(txt, x + padding / 2, y + padding / 2);
+    //ctx.fillText(txt, x + padding / 2, y + padding / 2);
 
     const buffer = canvas.toBuffer("image/jpeg");
     const imageUrl = await uploadInS3(imageFile, buffer);
