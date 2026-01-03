@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node app.js",
-    "dev": "cross-env NODE_ENV=production nodemon app.js",
+    "dev": "cross-env NODE_ENV=dev nodemon app.js",
     "prod": "cross-env NODE_ENV=production node app.js"
   },
   "dependencies": {
