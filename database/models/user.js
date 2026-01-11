@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const AddressSchema = require("./address");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -22,6 +23,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
   },
   resetToken: { type: String, default: null },
+  address: {
+    type: AddressSchema,
+    required: false,
+  },
 });
 
 const UserModel = mongoose.model("User", userSchema);

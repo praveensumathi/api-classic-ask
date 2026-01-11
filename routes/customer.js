@@ -18,6 +18,7 @@ router.get(
   use(customersController.getUserByUserId)
 );
 router.put("/updateProfile/:userId", use(customersController.updateProfile));
+router.put("/:userId/address", use(customersController.updateUserAddress));
 
 //Admin
 router.get("/adminLogout", use(adminCustomersController.adminLogout));

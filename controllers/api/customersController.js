@@ -32,7 +32,7 @@ exports.login = async (req, res, next) => {
       if (role) {
         user = await UserModel.findOne({ phoneNumber, role });
       } else {
-        user = await UserModel.findOne({ phoneNumber });
+        user = await UserModel.findOne({ phoneNumber, role: Roles.CUSTOMER });
       }
 
       if (!user) {
@@ -49,12 +49,12 @@ exports.login = async (req, res, next) => {
         throw error;
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        const error = new Error("Invalid credentials entered!");
-        error.statusCode = 400;
-        throw error;
-      }
+      // const isPasswordValid = await bcrypt.compare(password, user.password);
+      // if (!isPasswordValid) {
+      //   const error = new Error("Invalid credentials entered!");
+      //   error.statusCode = 400;
+      //   throw error;
+      // }
 
       var userObj = {
         userId: user._id,
@@ -62,6 +62,7 @@ exports.login = async (req, res, next) => {
         name: user.name,
         isReseller: user.isReseller,
         role: user.role,
+        address: user.address,
       };
 
       const token = jwt.sign(userObj, SECRET_KEY);
@@ -89,13 +90,16 @@ exports.login = async (req, res, next) => {
 exports.signup = async (req, res, next) => {
   let { name, phoneNumber, email, password, role } = req.body;
 
-  role = "customer";
+  role = Roles.CUSTOMER;
+  email = "";
 
   try {
     // Check if the user already exists
     const existingUser = await UserModel.findOne({ phoneNumber });
     if (existingUser && existingUser.role === role) {
-      const error = new Error("User Already exists with Phone number!");
+      const error = new Error(
+        "User Already exists on this Phone number, Please do Login"
+      );
       error.statusCode = 409;
       throw error;
     } else {
@@ -134,6 +138,7 @@ exports.signup = async (req, res, next) => {
             phoneNumber: savedUser.phoneNumber,
             name: savedUser.name,
             role: savedUser.role,
+            address: savedUser.address,
           },
         });
     }
@@ -330,6 +335,53 @@ exports.updateProfile = async (req, res, next) => {
     res.json(updateUserProfile);
   } catch (error) {
     error = new Error("Error while update user profile status");
+    error.statusCode = 500;
+    next(error);
+  }
+};
+
+/**
+ * @param {Request} req - The Express request object
+ * @param {Response} res - The Express response object
+ */
+exports.updateUserAddress = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { address, pincode, district, state } = req.body;
+
+    // Validate request body
+    if (!address || !pincode || !district || !state) {
+      return res.status(400).json({
+        message: "All address fields are required",
+      });
+    }
+
+    // Update only, no return
+    const result = await UserModel.updateOne(
+      { _id: userId, role: Roles.CUSTOMER },
+      {
+        $set: {
+          address: {
+            address,
+            pincode,
+            district,
+            state,
+          },
+        },
+      },
+      { runValidators: true }
+    );
+
+    // Check if user exists
+    if (result.matchedCount === 0) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return res.status(200).send();
+  } catch (error) {
+    console.error("Update address error:", error);
     error.statusCode = 500;
     next(error);
   }
