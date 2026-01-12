@@ -255,6 +255,7 @@ exports.getOrdersByUserId = async (req, res, next) => {
       {
         $match: { userId: _userId },
       },
+      { $sort: { orderedDateAndTime: -1 } },
       {
         $project: {
           _id: 1,
@@ -288,25 +289,36 @@ exports.getOrdersByUserId = async (req, res, next) => {
           orderedDateAndTime: 1,
           showposter: { $arrayElemAt: ["$productdetail.posterURL", 0] },
           deliveryFee: 1,
+          //truncate time but KEEP DATE TYPE
+          orderDateOnly: {
+            $dateTrunc: {
+              date: "$orderedDateAndTime",
+              unit: "day",
+            },
+          },
         },
       },
       {
         $group: {
-          _id: {
-            $dateToString: {
-              format: "%d-%m-%Y",
-              date: "$orderedDateAndTime",
-            },
-          },
+          _id: "$orderDateOnly", // REAL DATE
           orders: { $push: "$$ROOT" },
         },
       },
-      { $sort: { _id: -1 } },
+      //correct chronological sorting
+      {
+        $sort: { _id: -1 }, //_id is group accumalator key
+      },
+      //recent 10 dates
+      { $limit: 10 },
       {
         $project: {
           orders: 1,
-          _id: 0, //this isgroup key, not orders _id
-          orderedDate: "$_id", //_id means group key
+          orderedDate: {
+            $dateToString: {
+              format: "%d-%m-%Y",
+              date: "$_id", //_id is group accumalator key
+            },
+          },
         },
       },
     ]);
